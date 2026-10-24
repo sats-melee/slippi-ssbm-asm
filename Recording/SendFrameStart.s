@@ -38,6 +38,24 @@ blrl
 backup
 
 #------------- INITIALIZE -------------
+.ifdef SATS_ARENA
+  # Reinitialize every simulated local frame, including an empty credit batch.
+  # Online/rollback modes never capture or send this diagnostic packet.
+  getMinorMajor r3
+  cmpwi r3, SCENE_VERSUS_IN_GAME
+  bne ArenaResetDone
+  lwz r31, primaryDataBuffer(r13)
+  addi r3, r31, RDB_ARENA_TX
+  li r4, ARENA_PACKET_SIZE
+  branchl r12, Zero_AreaLength
+  li r3, CMD_ARENA_CREDIT_BATCH
+  stb r3, RDB_ARENA_TX(r31)
+  li r3, 1
+  stb r3, RDB_ARENA_TX+1(r31)
+  lwz r3, frameIndex(r13)
+  stw r3, RDB_ARENA_FRAME(r31)
+ArenaResetDone:
+.endif
 # here we want to initalize some variables we plan on using throughout
 # get current offset in buffer
   lwz r3, primaryDataBuffer(r13)

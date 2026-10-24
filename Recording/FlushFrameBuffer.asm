@@ -40,6 +40,22 @@ backup
   beq Injection_Exit
 
 # add frame bookend to transfer buffer
+.ifdef SATS_ARENA
+  # Append private diagnostics after ordinary frame data, before its bookend.
+  # This ordering ensures frame-start rollback invalidation runs before the
+  # replacement batch reaches the observer. EXI consumes it without recording.
+  getMinorMajor r3
+  cmpwi r3, SCENE_VERSUS_IN_GAME
+  bne ArenaFlushDone
+  mr r3, REG_WritePos
+  lwz r4, primaryDataBuffer(r13)
+  addi r4, r4, RDB_ARENA_TX
+  li r5, ARENA_PACKET_SIZE
+  branchl r12, memcpy
+  addi REG_WritePos, REG_WritePos, ARENA_PACKET_SIZE
+  addi REG_BufferOffset, REG_BufferOffset, ARENA_PACKET_SIZE
+ArenaFlushDone:
+.endif
 # send data
 # initial RNG command byte
   li r3,CMD_FRAME_BOOKEND

@@ -230,3 +230,7 @@ Output/Playback/build-playback.bat - Shortcut.lnk
 Output/Bootloader/build-bootloader.bat - Shortcut.lnk
 ./build-netplay0.sh
 ./netplay0.json
+
+# Local Sats Arena toolchain and generated build config
+/build-tools/
+/arena.generated.json

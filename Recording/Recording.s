@@ -58,6 +58,20 @@
 .set RDB_GAME_END_SENT, RDB_TXB_ADDRESS + 4 # bool
 .set RDB_LEN, RDB_GAME_END_SENT + 1
 
+# Opt-in, NTSC-U local diagnostics. This packet is NOT part of the replay stream.
+.ifdef SATS_ARENA
+  .set CMD_ARENA_CREDIT_BATCH, 0xE6
+  .set ARENA_MAX_CREDITS, 32
+  .set ARENA_RECORD_SIZE, 12
+  .set ARENA_PACKET_SIZE, 8 + ARENA_MAX_CREDITS * ARENA_RECORD_SIZE
+  .set RDB_ARENA_TX, 8
+  .set RDB_ARENA_COUNT, RDB_ARENA_TX + 2
+  .set RDB_ARENA_OVERFLOW, RDB_ARENA_TX + 3
+  .set RDB_ARENA_FRAME, RDB_ARENA_TX + 4
+  .set RDB_ARENA_RECORDS, RDB_ARENA_TX + 8
+  .set RDB_LEN, RDB_ARENA_TX + ARENA_PACKET_SIZE
+.endif
+
 # Calculate out the maximum buffer length that will be needed. This buffer
 # is also used for transferring message descriptions and game info but that
 # length should be less than the frame buf length
@@ -83,6 +97,9 @@
 .set TOTAL_FRAME_BOOKEND_LEN, GAME_FRAME_BOOKEND_PAYLOAD_LENGTH + 1
 .set TOTAL_GAME_END_LEN, GAME_END_PAYLOAD_LENGTH + 1
 .set FULL_FRAME_DATA_BUF_LENGTH, TOTAL_FRAME_START_LEN + TOTAL_CHAR_FRAME_LEN + TOTAL_ITEM_LEN + TOTAL_MAX_STAGE_LEN + TOTAL_FRAME_BOOKEND_LEN + TOTAL_GAME_END_LEN
+.ifdef SATS_ARENA
+  .set FULL_FRAME_DATA_BUF_LENGTH, FULL_FRAME_DATA_BUF_LENGTH + ARENA_PACKET_SIZE
+.endif
 
 # build version number. Each byte is one digit
 # any change in command data should result in a minor version change
