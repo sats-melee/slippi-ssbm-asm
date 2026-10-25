@@ -54,7 +54,7 @@ manifest = {
     'source_sha256': {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in sources},
     'codeset_sha256': hashlib.sha256(output.read_bytes()).hexdigest(),
     'not_for_settlement': True,
-    'payment_gate': {'command': '0xE7', 'request_bytes': 12, 'response_bytes': 1,
+    'payment_gate': {'command': '0xE7', 'protocol': 2, 'request_bytes': 20, 'response_bytes': 1,
                      'entry': '0x80263250', 'expected_instruction': '880db652',
                      'reset_entry': '0x8026699C', 'reset_instruction': '900db638'},
 }

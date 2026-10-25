@@ -24,7 +24,7 @@ addi r31, r1, 0xA0
 byteAlign32 r31
 li r0, 0xE7
 stb r0, 0(r31)
-li r0, 1
+li r0, 2
 stb r0, 1(r31)
 lbz r3, -0x49a9(r13) # prompt animation/readiness counter
 li r0, 0
@@ -32,13 +32,6 @@ cmpwi r3, 0
 beq ArenaNotReady
 li r0, 1
 ArenaNotReady:
-# CSSData.vs.start.rules.is_teams is at +0x18.
-lwz r3, -0x49f0(r13)
-lbz r3, 0x18(r3)
-cmpwi r3, 0
-beq ArenaModeOK
-li r0, 0
-ArenaModeOK:
 stb r0, 2(r31)
 li r0, 0
 andi. r3, r7, 0x1000
@@ -50,6 +43,12 @@ li r0, 1
 ArenaNoStart:
 stb r0, 3(r31)
 
+# v2: team mode, four CSSDoor.team bytes, and zeroed reserved bytes.
+li r0, 0
+stw r0, 16(r31)
+lwz r3, -0x49f0(r13)
+lbz r0, 0x18(r3) # CSSData.vs.start.rules.is_teams
+stb r0, 12(r31)
 load r30, 0x803F0DFC # CSS doors, stride 0x24
 li r29, 0
 ArenaRosterLoop:
@@ -61,12 +60,24 @@ stbx r0, r31, r5
 lbz r0, 0x0e(r4) # selected character icon
 addi r5, r29, 8
 stbx r0, r31, r5
+# Normalize inactive/FFA teams so irrelevant colors never change admission.
+li r0, 255
+lbz r5, 12(r31)
+cmpwi r5, 1
+bne ArenaStoreTeam
+lbz r5, 0x0b(r4)
+cmpwi r5, 1
+bgt ArenaStoreTeam
+lbz r0, 0x0a(r4) # CSSDoor.team: red=0, blue=1, green=2
+ArenaStoreTeam:
+addi r5, r29, 13
+stbx r0, r31, r5
 addi r29, r29, 1
 cmpwi r29, 4
 blt ArenaRosterLoop
 
 mr r3, r31
-li r4, 12
+li r4, 20
 li r5, CONST_ExiWrite
 branchl r12, FN_EXITransferBuffer
 # Default denial before reading the response.

@@ -53,10 +53,18 @@ stw r0, 4(r31)
 stw r0, 8(r31)
 li r0, 0xE7
 stb r0, 0(r31)
-li r0, 1
+li r0, -1
+stw r0, 12(r31)
+stw r0, 16(r31)
+li r0, 0
+stb r0, 12(r31)
+stb r0, 17(r31)
+stb r0, 18(r31)
+stb r0, 19(r31)
+li r0, 2
 stb r0, 1(r31)
 mr r3, r31
-li r4, 12
+li r4, 20
 li r5, CONST_ExiWrite
 branchl r12, FN_EXITransferBuffer
 ArenaCSSResetExit:

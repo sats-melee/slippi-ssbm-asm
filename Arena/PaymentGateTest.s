@@ -57,10 +57,82 @@ bne FailedDeny
 load r8, Response
 li r9, 1
 stb r9, 0(r8)
+load r8, Expected
+li r9, 0
+stb r9, 3(r8)
 li r7, 0x10
 bl Hook
 cmpwi r7, 0x1010
 bne FailedGrant
+
+# Four slots in teams: P1/P3 red, P2 blue, CPU P4 green.
+load r8, 0x80410000
+li r9, 1
+stb r9, 0x18(r8)
+load r8, 0x803f0dfc
+li r9, 0
+stb r9, 0x0a(r8)
+stb r9, 0x52(r8)
+stb r9, 0x53(r8)
+li r9, 1
+stb r9, 0x2e(r8)
+stb r9, 0x77(r8)
+li r9, 2
+stb r9, 0x76(r8)
+li r9, 3
+stb r9, 0x56(r8)
+li r9, 4
+stb r9, 0x7a(r8)
+load r8, Expected
+li r9, 1
+stb r9, 12(r8)
+stb r9, 7(r8)
+stb r9, 14(r8)
+li r9, 0
+stb r9, 6(r8)
+stb r9, 13(r8)
+stb r9, 15(r8)
+li r9, 2
+stb r9, 16(r8)
+li r9, 3
+stb r9, 10(r8)
+li r9, 4
+stb r9, 11(r8)
+li r7, 0x10
+bl Hook
+cmpwi r7, 0x1010
+bne FailedGrant
+
+# A team color edit must appear in the next query.
+load r8, 0x803f0dfc
+li r9, 2
+stb r9, 0x52(r8)
+load r8, Expected
+stb r9, 15(r8)
+li r7, 0x10
+bl Hook
+
+# Closed slots and FFA never leak stale team colors.
+load r8, 0x803f0dfc
+li r9, 3
+stb r9, 0x77(r8)
+load r8, Expected
+stb r9, 7(r8)
+li r9, 255
+stb r9, 16(r8)
+li r7, 0x10
+bl Hook
+load r8, 0x80410000
+li r9, 0
+stb r9, 0x18(r8)
+load r8, Expected
+stb r9, 12(r8)
+li r9, 255
+stb r9, 13(r8)
+stb r9, 14(r8)
+stb r9, 15(r8)
+li r7, 0x10
+bl Hook
 
 # Online CSS is untouched and must not query the host.
 load r8, 0x80479d30
@@ -82,23 +154,18 @@ b Exit
 MockEXI:
 cmpwi r5, CONST_ExiRead
 beq Read
-cmpwi r4, 12
+cmpwi r4, 20
 bne FailedPacket
-lbz r8, 0(r3)
-cmpwi r8, 0xe7
+load r8, Expected
+li r9, 0
+CheckPacket:
+lbzx r10, r3, r9
+lbzx r11, r8, r9
+cmpw r10, r11
 bne FailedPacket
-lbz r8, 1(r3)
-cmpwi r8, 1
-bne FailedPacket
-lbz r8, 2(r3)
-cmpwi r8, 1
-bne FailedPacket
-lbz r8, 4(r3)
-cmpwi r8, 0
-bne FailedPacket
-lbz r8, 6(r3)
-cmpwi r8, 3
-bne FailedPacket
+addi r9, r9, 1
+cmpwi r9, 20
+blt CheckPacket
 load r8, Calls
 lwz r9, 0(r8)
 addi r9, r9, 1
@@ -141,6 +208,8 @@ Hook:
 blr
 
 .section .data
+Expected: .byte 0xe7,2,1,1,0,0,3,3,1,2,0,0,0,255,255,255,255,0,0,0
+.align 2
 Response: .long 0
 Calls: .long 0
 .section .bss

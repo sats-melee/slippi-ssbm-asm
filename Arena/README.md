@@ -59,17 +59,28 @@ handler at `0x80263258`. It preserves GPRs, CR, CTR, XER and LR, using a
 32-byte-aligned stack buffer for synchronous EXI. No live floating-point
 values remain at this point in the function.
 
-Only local Versus CSS calls the bridge. Teams and unsupported rosters remain
-blocked. The private query is 12 bytes:
+Only local Versus CSS calls the bridge. Protocol v2 reports all four slots,
+including CPU slots and live team assignments. The private query is 20 bytes:
 
 | Offset | Field |
 | --- | --- |
 | 0 | Command `0xE7` |
-| 1 | Version `1` |
-| 2 | Prompt ready, 0 or 1 (zero for teams) |
+| 1 | Version `2` |
+| 2 | Prompt ready, 0 or 1 (including teams) |
 | 3 | Start trigger with input cooldown clear, 0 or 1 |
 | 4–7 | P1–P4 slot kinds (human=0, CPU=1, closed=3) |
 | 8–11 | P1–P4 character-select icon IDs |
+| 12 | Teams enabled, 0 or 1 |
+| 13–16 | P1–P4 team IDs: red=0, blue=1, green=2; 255 for closed/FFA |
+| 17–19 | Reserved, always zero |
+
+The CSSDoor.team field is +0x0A in the 0x24-byte door at 0x803F0DFC.
+CSSData.vs.start.rules.is_teams is +0x18 from the CSSData pointer.
+Team assignments are read on every query, before match entry. A mode, roster,
+character, or team change revokes prior authorization. The host continues to
+block expanded funding until its corresponding settlement engine is connected.
+The CSS-load reset uses the same v2 size with non-ready invalid slot kinds.
+Old/truncated packets fail closed and revoke any previous grant.
 
 Dolphin replies with exactly one byte: 1 allows the latched Start; all other
 values block it. Missing replies default to denial. The request never enters
