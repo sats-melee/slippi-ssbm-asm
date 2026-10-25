@@ -41,7 +41,7 @@ explicitly, **never forward it to files, spectators, or reporting**. Do not use
 this codeset with an unmodified emulator.
 
 This is not a public Slippi event allocation. The emulator gates interpretation
-to local, two-player, non-team matches and publishes only finalized batches.
+to local 2–4 participant FFA/team matches and publishes only finalized batches.
 Future rollback support must reset/restore this buffer each resimulation and
 replace entire pending batches (including empty ones); it is intentionally not
 enabled for online play.
@@ -77,8 +77,7 @@ including CPU slots and live team assignments. The private query is 20 bytes:
 The CSSDoor.team field is +0x0A in the 0x24-byte door at 0x803F0DFC.
 CSSData.vs.start.rules.is_teams is +0x18 from the CSSData pointer.
 Team assignments are read on every query, before match entry. A mode, roster,
-character, or team change revokes prior authorization. The host continues to
-block expanded funding until its corresponding settlement engine is connected.
+character, or team change revokes prior authorization. The matching host binds this roster to human funding and team settlement.
 The CSS-load reset uses the same v2 size with non-ready invalid slot kinds.
 Old/truncated packets fail closed and revoke any previous grant.
 
@@ -96,3 +95,45 @@ Reference for the matched CSS function and data layout:
 https://github.com/doldecomp/melee/blob/master/src/melee/mn/mncharsel.c
 and `src/melee/mn/types.h`. The validator checks actual target DOL instructions
 rather than trusting the reference source alone.
+
+
+## Private authoritative result summary
+
+`Arena/SendResult.s` extends the existing `Recording/SendGameEnd.asm` injection
+at `0x8016D884`; it introduces no second hook at that address. After the existing
+`CreateMatchEndData` call populates results, and before ordinary Slippi `0x39`
+is sent, local Versus emits this fixed 16-byte private message:
+
+| Offset | Field |
+| --- | --- |
+| 0 | Command `0xE8` |
+| 1 | Version `1` |
+| 2 | MatchEnd outcome (normal timeout/stocks/stamina = 1/2/3) |
+| 3 | Teams enabled, 0 or 1 |
+| 4 | Active P1–P4 bit mask |
+| 5 | Winning P1–P4 bit mask; zero if ambiguous or no contest |
+| 6 | Winning team 0/1/2; 255 for FFA or no winner |
+| 7 | Reserved zero |
+| 8–11 | P1–P4 slot kinds (human=0, CPU=1, closed=3) |
+| 12–15 | Team IDs; 255 for FFA/closed |
+
+Teams use the unique active **team** with `is_small_loser == 0`, and include
+all members of that team, even eliminated teammates and CPUs. Individual ranks
+cannot substitute for a team's aggregate stock/timeout result. FFA requires a
+unique rank-zero participant. Tied results, incomplete/invalid standings,
+unsupported team IDs and no contest report no winner. The host must also match
+the result roster against the paid/start roster and await the ordinary `0x39`
+with the same outcome before using it. It must strip E8 from replay/spectator
+traffic, like E6/E7.
+
+The target `MatchEnd` is at `0x80479DA4`, player standings at +0x58 with stride
+0xA8, and team standings at **+0x1C** with stride 0x0C. The decomp source's
++0x1B comment misses alignment padding. Actual NTSC-U 1.02 instructions in
+`gm_801654A0` read team rank at +0x25 and active at +0x26; the validator checks
+those exact loads as well as the original game-end injection instruction.
+
+`Arena/test-result.sh` executes the actual PPC sender under QEMU. Fixtures
+cover FFA/CPU winners, stocks, timeout, eliminated winning teammates, tied
+standings, no contest and invalid fields, along with register/CR/CTR/XER
+preservation and online/replay exclusion. These fixtures test the transport and
+result interpretation; actual game-end data must also be tested in the launcher.

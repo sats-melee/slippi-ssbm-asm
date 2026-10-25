@@ -99,6 +99,10 @@ stb r0, 0x6(r3)
 lbz r0, 0x0008(r4)
 stb r0, 0x4(r3)
 branchl r12, 0x80166378 # CreateMatchEndData (struct @ 80479da4)
+
+.ifdef SATS_ARENA
+.include "Arena/SendResult.s"
+.endif
  
 PlayerPlacementsLoopInit:
 li REG_PlayerSlot, 0 # Start at slot 1

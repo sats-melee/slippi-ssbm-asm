@@ -22,7 +22,9 @@ with iso.open('rb') as f:
     addresses = struct.unpack_from('>7I', dol, 0x48)
     sizes = struct.unpack_from('>7I', dol, 0x90)
     for hook, expected in [(0x80263250, '880db652'), (0x8026699c, '900db638'),
-                           (0x8003eb30, '7c0802a690010004')]:
+                           (0x8003eb30, '7c0802a690010004'),
+                           (0x8016d884, '819f2514'),
+                           (0x801654a0, '88030026'), (0x801654b0, '88030025')]:
         for offset, address, size in zip(offsets, addresses, sizes):
             if address <= hook < address + size:
                 f.seek(dol_offset + offset + hook - address)
@@ -42,8 +44,11 @@ if len(re.findall(r'^C2263250 ', text, re.M)) != 1:
     raise SystemExit('Expected exactly one CSS payment hook at 0x80263250.')
 if len(re.findall(r'^C226699C ', text, re.M)) != 1:
     raise SystemExit('Expected exactly one CSS-load reset hook at 0x8026699c.')
+if len(re.findall(r'^C216D884 ', text, re.M)) != 1:
+    raise SystemExit('Expected exactly one extended game-end hook at 0x8016d884.')
 sources = ['Arena/PaymentGate.asm', 'Online/Menus/CSS/SceneLoadCSS.asm',
-           'Arena/CaptureCredit.asm', 'Recording/Recording.s', 'Recording/SendFrameStart.s',
+           'Arena/CaptureCredit.asm', 'Arena/SendResult.s', 'Recording/SendGameEnd.asm',
+           'Recording/Recording.s', 'Recording/SendFrameStart.s',
            'Recording/FlushFrameBuffer.asm', 'build-arena.sh']
 manifest = {
     'format': 1, 'protocol': 1, 'command': '0xE6', 'packet_bytes': 392,
@@ -54,9 +59,13 @@ manifest = {
     'source_sha256': {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in sources},
     'codeset_sha256': hashlib.sha256(output.read_bytes()).hexdigest(),
     'not_for_settlement': True,
+    'result': {'command': '0xE8', 'protocol': 1, 'packet_bytes': 16,
+               'extends_entry': '0x8016D884', 'expected_instruction': '819f2514',
+               'team_standings_offset': '0x1C', 'team_rank_offset': '0x25',
+               'team_active_offset': '0x26', 'team_stride': '0xC'},
     'payment_gate': {'command': '0xE7', 'protocol': 2, 'request_bytes': 20, 'response_bytes': 1,
                      'entry': '0x80263250', 'expected_instruction': '880db652',
                      'reset_entry': '0x8026699C', 'reset_instruction': '900db638'},
 }
 (output.parent / 'arena-manifest.json').write_text(json.dumps(manifest, indent=2) + '\n')
-print('PASS: NTSC-U 1.02 credit/CSS/reset instructions, unique enabled hooks, codeset provenance')
+print('PASS: NTSC-U 1.02 credit/CSS/reset/result instructions and team offsets, unique enabled hooks, codeset provenance')
