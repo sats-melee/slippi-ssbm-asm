@@ -32,6 +32,43 @@ blrl
 CODE_START:
 stw r0, -0x49C8(r13) # replaced code line
 
+.ifdef SATS_ARENA
+# A fresh local CSS visit must never reuse stage-select admission.
+backupall
+mfcr r0
+stw r0, 0x80(r1)
+mfctr r0
+stw r0, 0x84(r1)
+mfxer r0
+stw r0, 0x88(r1)
+getMinorMajor r3
+cmpwi r3, SCENE_VERSUS_CSS
+bne ArenaCSSResetExit
+addi r31, r1, 0xA0
+byteAlign32 r31
+li r0, 0
+stw r0, 0(r31)
+li r0, -1
+stw r0, 4(r31)
+stw r0, 8(r31)
+li r0, 0xE7
+stb r0, 0(r31)
+li r0, 1
+stb r0, 1(r31)
+mr r3, r31
+li r4, 12
+li r5, CONST_ExiWrite
+branchl r12, FN_EXITransferBuffer
+ArenaCSSResetExit:
+lwz r0, 0x88(r1)
+mtxer r0
+lwz r0, 0x84(r1)
+mtctr r0
+lwz r0, 0x80(r1)
+mtcrf 0xff, r0
+restoreall
+.endif
+
 # Ensure that this is an online CSS
 getMinorMajor r3
 cmpwi r3, SCENE_ONLINE_CSS

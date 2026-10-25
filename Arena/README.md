@@ -1,4 +1,4 @@
-# Sats Arena local damage-credit diagnostics
+# Sats Arena local funding gate and damage-credit diagnostics
 
 Opt-in **NTSC-U Melee 1.02 only**. `build-arena.sh` derives a private build config
 from `netplay.json`, defines `SATS_ARENA`, and generates
@@ -49,3 +49,39 @@ enabled for online play.
 Game credit and applied damage can differ for armor, invulnerability, throws,
 followers and the percent cap. Records retain follower and attack identities.
 They are diagnostic observations, not financial authorization or remote proof.
+
+## Character-select funding gate
+
+`PaymentGate.asm` injects at `0x80263250` (verified original instruction
+`880DB652`, `lbz r0,-0x49ae(r13)`). This runs immediately after
+`fn_80262F44` updates the PRESS START prompt and before the existing input
+handler at `0x80263258`. It preserves GPRs, CR, CTR, XER and LR, using a
+32-byte-aligned stack buffer for synchronous EXI. No live floating-point
+values remain at this point in the function.
+
+Only local Versus CSS calls the bridge. Teams and unsupported rosters remain
+blocked. The private query is 12 bytes:
+
+| Offset | Field |
+| --- | --- |
+| 0 | Command `0xE7` |
+| 1 | Version `1` |
+| 2 | Prompt ready, 0 or 1 (zero for teams) |
+| 3 | Start trigger with input cooldown clear, 0 or 1 |
+| 4–7 | P1–P4 slot kinds (human=0, CPU=1, closed=3) |
+| 8–11 | P1–P4 character-select icon IDs |
+
+Dolphin replies with exactly one byte: 1 allows the latched Start; all other
+values block it. Missing replies default to denial. The request never enters
+replay command registration, replay files, spectators, or peer traffic.
+
+The existing SceneLoadCSS hook also sends a non-ready reset query on every
+local CSS entry. This invalidates stage-select admission even if players
+return with identical characters. The host correlates asynchronous funding
+admission with a selection generation. Once admitted, the hook replays the
+queued Start; vanilla Melee performs its normal transition into stage select.
+
+Reference for the matched CSS function and data layout:
+https://github.com/doldecomp/melee/blob/master/src/melee/mn/mncharsel.c
+and `src/melee/mn/types.h`. The validator checks actual target DOL instructions
+rather than trusting the reference source alone.
