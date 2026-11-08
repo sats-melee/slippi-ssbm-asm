@@ -17,10 +17,11 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: Install Arena PPC test tools
+      - name: Install pinned assembler and PPC test tools
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y binutils-powerpc-linux-gnu qemu-user
+          bash setup-arena-tools.sh
+          echo "$GITHUB_WORKSPACE/build-tools/bin" >> "$GITHUB_PATH"
       - name: Check Arena room menus, credits and result hooks
         env:
           QEMU_GUEST_BASE: "0x100000000"
@@ -34,5 +35,8 @@ jobs:
         if: success()
         working-directory: ${{ github.workspace }}
         run: |
-          sudo docker run --volume=${PWD}:/work --workdir=/work nikhilnarayana/devkitpro-slippi:7 make ini list
+          make ini list
+          expected=$(sha256sum Output/Arena/GALE01r2.ini | cut -d ' ' -f1)
+          bash build-arena.sh
+          echo "$expected  Output/Arena/GALE01r2.ini" | sha256sum --check
       - uses: numtide/clean-git-action@v1

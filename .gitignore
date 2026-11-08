@@ -234,3 +234,4 @@ Output/Bootloader/build-bootloader.bat - Shortcut.lnk
 # Local Sats Arena toolchain and generated build config
 /build-tools/
 /arena.generated.json
+/.gecko/

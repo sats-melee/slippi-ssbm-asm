@@ -53,7 +53,7 @@ if len(re.findall(r'^C222AFEC ', text, re.M)) != 1:
 for hook in ('C2260310', 'C22652F4', 'C21A45B8'):
     if len(re.findall(r'^' + hook + r' ', text, re.M)) != 1:
         raise SystemExit(f'Expected exactly one room CSS/gameplay hook {hook}.')
-sources = ['Online/Online.s', 'Online/Menus/TitleMenu/ArenaRoomMenu.asm',
+sources = ['Online/Online.s', 'Arena/ArenaRoomMenu.asm',
            'Online/Menus/TitleMenu/OnMenuPrep.asm', 'Online/Menus/TitleMenu/HandleOnlineLockedOptions.asm',
            'Online/Menus/CSS/LoadCSSText.asm', 'Online/Menus/CSS/FetchMatchInfo.asm',
            'Online/Menus/CSS/Teams/InitTeamToggleButton.asm',

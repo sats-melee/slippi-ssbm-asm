@@ -3,6 +3,8 @@
 from pathlib import Path
 
 root = Path(__file__).resolve().parents[1]
+assert (root / 'Arena/ArenaRoomMenu.asm').is_file()
+assert not (root / 'Online/Menus/TitleMenu/ArenaRoomMenu.asm').exists()
 menu = (root / 'Online/Menus/TitleMenu/OnMenuPrep.asm').read_text()
 constants = (root / 'Online/Online.s').read_text()
 entry = (root / 'Online/Menus/CSS/TextEntryScreen/CheckTriggersAndZ.asm').read_text()
