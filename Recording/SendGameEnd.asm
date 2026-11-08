@@ -46,8 +46,16 @@ backup
   getMinorMajor r3
   cmpwi r3, SCENE_ONLINE_IN_GAME
   bne StartWrite # If not online in-game, just write end
+.ifdef SATS_ARENA
+  # Timeout, stock and stamina results all need rollback confirmation.
+  cmplwi REG_GameEndID, 1
+  blt StartWrite
+  cmplwi REG_GameEndID, 3
+  bgt StartWrite
+.else
   cmpwi REG_GameEndID,0x2 # Check if GAME! end
   bne StartWrite
+.endif
   lwz r3, OFST_R13_ODB_ADDR(r13) # data buffer address
   lbz r3, ODB_IS_GAME_OVER(r3)
   #logf LOG_LEVEL_NOTICE, "Game end being checked %d", "mr r5, 3"

@@ -39,11 +39,13 @@ backup
 
 #------------- INITIALIZE -------------
 .ifdef SATS_ARENA
-  # Reinitialize every simulated local frame, including an empty credit batch.
-  # Online/rollback modes never capture or send this diagnostic packet.
+  # Reinitialize every simulated frame, including rollback re-simulation and empty batches.
   getMinorMajor r3
   cmpwi r3, SCENE_VERSUS_IN_GAME
+  beq ArenaResetScene
+  cmpwi r3, SCENE_ONLINE_IN_GAME
   bne ArenaResetDone
+ArenaResetScene:
   lwz r31, primaryDataBuffer(r13)
   addi r3, r31, RDB_ARENA_TX
   li r4, ARENA_PACKET_SIZE

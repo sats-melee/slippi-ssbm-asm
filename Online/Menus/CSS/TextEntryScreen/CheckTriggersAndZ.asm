@@ -27,6 +27,10 @@ beq CHECK_Z
 branch r12, 0x8023ccac
 
 CHECK_Z:
+.ifdef SATS_ARENA
+# No suggestions exist in room mode; Z must not commit an empty suggestion.
+branch r12, 0x8023cd34
+.endif
 
 backupall
 
@@ -119,6 +123,12 @@ mr REG_SCROLL_DIR, r3
 lbz r3, OFST_R13_NAME_ENTRY_MODE(r13)
 cmpwi r3, 0
 beq FN_FetchSuggestion_Restore
+
+.ifdef SATS_ARENA
+# Room codes have no official-player history or autocomplete.
+branchl r12, 0x8023ce4c
+b FN_FetchSuggestion_Restore
+.endif
 
 # Fetch ACB and ACXB
 bl STATIC_MEMORY_TABLE_BLRL

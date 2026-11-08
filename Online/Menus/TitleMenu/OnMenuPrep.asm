@@ -59,6 +59,12 @@
 .set DLG_DT_SIZE, DLG_DT_TEXT_STRUCT_ADDR + 4
 
 backup
+.ifdef SATS_ARENA
+bl ARENA_MENU_DATA
+mflr r3
+li r4, 0
+stw r4, 0(r3)
+.endif
 
 ################################################################################
 # Section 1: Overwrite handler function pointer for going back to menu from
@@ -145,9 +151,15 @@ stb r0, 0(r31)
 # Get the selected index we want
 li r3, 0x8
 lbz r4, OFST_R13_ONLINE_MODE(r13) # The online mode is the option we want
+.ifdef SATS_ARENA
+subi r4, r4, 1
+.endif
 branchl r12, 0x80229938 # MainMenu_CheckIfOptionIsUnlocked
 cmpwi r3, 0
 lbz r3, OFST_R13_ONLINE_MODE(r13) # The online mode is the option we want
+.ifdef SATS_ARENA
+subi r3, r3, 1
+.endif
 bne FN_OnReturnFromOnline_SET_SELECTED_INDEX
 
 # If option we want is locked, fetch first unlocked option
@@ -243,6 +255,9 @@ backup BKP_DEFAULT_FREE_SPACE_SIZE, NUM_FREG, NUM_GPREG
 # Check if confirm dialog is open or not, and prevent input if it is
 ################################################################################
 mr REG_SM_GOBJ, r3
+.ifdef SATS_ARENA
+bl ARENA_MENU_DRAW
+.endif
 
 lwz r3, MENU_DLG_USER_DATA_OFFSET(REG_SM_GOBJ)
 cmpwi r3, 0
@@ -359,6 +374,11 @@ li r4, CONST_SlippiCmdUpdateApp
 b FN_OnlineSubmenuThink_TRIGGER_EXI_MSG
 
 FN_OnlineSubmenuThink_GO_TO_CSS:
+.ifdef SATS_ARENA
+mr r18, r3
+bl ARENA_MENU_REMOVE
+mr r3, r18
+.endif
 # Set the selected mode
 stb r3, OFST_R13_ONLINE_MODE(r13)
 
@@ -390,6 +410,9 @@ beq- FN_OnlineSubmenuThink_B_PRESS_HANDLER_END
 # B Press Handler
 ################################################################################
 FN_OnlineSubmenuThink_B_PRESS_HANLER:
+.ifdef SATS_ARENA
+bl ARENA_MENU_REMOVE
+.endif
 li	r3, 0
 branchl r12, SFX_Menu_CommonSound
 stb	r30, 0x0011 (r29)
@@ -506,11 +529,15 @@ blrl
 .long 0x803eb57c # Ptr to preview animation frame values (stolen from reg match)
 .float 140 # Frame index pointing at the option text images
 .long 0x803eb684 # Ptr to description text. Will be overwritten
-.byte 0x08 # Number of options
+.byte ONLINE_SUBMENU_OPTION_COUNT # Number of options
 .align 2
 
 Data_OnlineSubmenuDescriptions:
 blrl
+.ifdef SATS_ARENA
+.short 0x0646 # Create room (reuses online mode 1)
+.short 0x0647 # Join room (reuses online mode 2)
+.else
 .short 0x0645 # Ranked
 .short 0x0646 # Unranked
 .short 0x0647 # Direct
@@ -519,7 +546,116 @@ blrl
 .short 0x0648 # Log-in
 .short 0x0649 # Log-out
 .short 0x064A # Update
+.endif
 .align 2
+
+.ifdef SATS_ARENA
+# Native text keeps room choices independent of Slippi's baked menu textures.
+ARENA_MENU_DATA:
+blrl
+.long 0
+.float 0.1, 0.0, 0.7, -170.0, -100.0, -35.0, 30.0, 110.0
+.long 0xFFFFFFFF, 0x78E2B4FF
+ARENA_MENU_TITLE:
+blrl
+.string "SATS MELEE ROOMS"
+.align 2
+ARENA_MENU_CREATE:
+blrl
+.string "Create Room"
+.align 2
+ARENA_MENU_JOIN:
+blrl
+.string "Join Room"
+.align 2
+ARENA_MENU_HELP:
+blrl
+.string "A: Select    B: Back"
+.align 2
+.align 2
+
+ARENA_MENU_DRAW:
+backup
+bl ARENA_MENU_DATA
+mflr r31
+lwz r30, 0(r31)
+cmpwi r30, 0
+bne ARENA_MENU_COLORS
+li r3, 0
+li r4, 0
+branchl r12, Text_CreateStruct
+mr r30, r3
+stw r30, 0(r31)
+lfs f1, 4(r31)
+stfs f1, 0x24(r30)
+stfs f1, 0x28(r30)
+li r3, 1
+stb r3, 0x49(r30)
+li r3, 0
+stb r3, 0x4A(r30)
+# Four subtexts: title, create, join, controller help.
+li r29, 0
+ARENA_MENU_TEXT_LOOP:
+mr r3, r30
+addi r4, r31, 36
+li r5, 0
+lfs f1, 12(r31)
+lfs f2, 16(r31)
+slwi r28, r29, 2
+addi r28, r28, 20
+lfsx f3, r31, r28
+bl ARENA_MENU_TITLE
+mflr r7
+cmpwi r29, 0
+beq ARENA_MENU_ADD_TEXT
+bl ARENA_MENU_CREATE
+mflr r7
+cmpwi r29, 1
+beq ARENA_MENU_ADD_TEXT
+bl ARENA_MENU_JOIN
+mflr r7
+cmpwi r29, 2
+beq ARENA_MENU_ADD_TEXT
+bl ARENA_MENU_HELP
+mflr r7
+ARENA_MENU_ADD_TEXT:
+branchl r12, FG_CreateSubtext
+addi r29, r29, 1
+cmpwi r29, 4
+blt ARENA_MENU_TEXT_LOOP
+ARENA_MENU_COLORS:
+load r3, Menu_FlowData
+lhz r28, 2(r3)
+li r29, 0
+ARENA_MENU_COLOR_LOOP:
+mr r3, r30
+addi r4, r29, 1
+addi r5, r31, 36
+cmpw r29, r28
+bne ARENA_MENU_SET_COLOR
+addi r5, r31, 40
+ARENA_MENU_SET_COLOR:
+branchl r12, Text_ChangeTextColor
+addi r29, r29, 1
+cmpwi r29, 2
+blt ARENA_MENU_COLOR_LOOP
+restore
+blr
+
+ARENA_MENU_REMOVE:
+backup
+bl ARENA_MENU_DATA
+mflr r31
+lwz r3, 0(r31)
+cmpwi r3, 0
+beq ARENA_MENU_REMOVE_DONE
+branchl r12, Text_RemoveText
+li r3, 0
+stw r3, 0(r31)
+ARENA_MENU_REMOVE_DONE:
+restore
+blr
+.endif
 
 FN_CREATE_DIALOG:
 backup BKP_DEFAULT_FREE_SPACE_SIZE, 2

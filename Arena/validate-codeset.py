@@ -22,8 +22,10 @@ with iso.open('rb') as f:
     addresses = struct.unpack_from('>7I', dol, 0x48)
     sizes = struct.unpack_from('>7I', dol, 0x90)
     for hook, expected in [(0x80263250, '880db652'), (0x8026699c, '900db638'),
-                           (0x8003eb30, '7c0802a690010004'),
+                           (0x8003eb30, '7c0802a690010004'), (0x8022afec, '7c0802a6'),
                            (0x8016d884, '819f2514'),
+                           (0x80260310, '38000000'), (0x802652f4, '48141461'),
+                           (0x801a45b8, '3ba30004'),
                            (0x801654a0, '88030026'), (0x801654b0, '88030025')]:
         for offset, address, size in zip(offsets, addresses, sizes):
             if address <= hook < address + size:
@@ -46,19 +48,35 @@ if len(re.findall(r'^C226699C ', text, re.M)) != 1:
     raise SystemExit('Expected exactly one CSS-load reset hook at 0x8026699c.')
 if len(re.findall(r'^C216D884 ', text, re.M)) != 1:
     raise SystemExit('Expected exactly one extended game-end hook at 0x8016d884.')
-sources = ['Arena/PaymentGate.asm', 'Online/Menus/CSS/SceneLoadCSS.asm',
+if len(re.findall(r'^C222AFEC ', text, re.M)) != 1:
+    raise SystemExit('Expected exactly one room-menu model hook at 0x8022afec.')
+for hook in ('C2260310', 'C22652F4', 'C21A45B8'):
+    if len(re.findall(r'^' + hook + r' ', text, re.M)) != 1:
+        raise SystemExit(f'Expected exactly one room CSS/gameplay hook {hook}.')
+sources = ['Online/Online.s', 'Online/Menus/TitleMenu/ArenaRoomMenu.asm',
+           'Online/Menus/TitleMenu/OnMenuPrep.asm', 'Online/Menus/TitleMenu/HandleOnlineLockedOptions.asm',
+           'Online/Menus/CSS/LoadCSSText.asm', 'Online/Menus/CSS/FetchMatchInfo.asm',
+           'Online/Menus/CSS/Teams/InitTeamToggleButton.asm',
+           'Online/Slippi Online Scene/main.asm',
+           'Online/Menus/CSS/TextEntryScreen/CheckTriggersAndZ.asm',
+           'Online/Menus/CSS/TextEntryScreen/HandleDescriptionText.asm',
+           'Arena/PaymentGate.asm', 'Online/Menus/CSS/SceneLoadCSS.asm',
            'Arena/CaptureCredit.asm', 'Arena/SendResult.s', 'Recording/SendGameEnd.asm',
            'Recording/Recording.s', 'Recording/SendFrameStart.s',
            'Recording/FlushFrameBuffer.asm', 'build-arena.sh']
 manifest = {
     'format': 1, 'protocol': 1, 'command': '0xE6', 'packet_bytes': 392,
-    'game': 'GALE01r2', 'mode': 'local VS diagnostics only', 'entry': '0x8003EB30',
+    'game': 'GALE01r2', 'mode': 'local VS and rollback-finalized online credits', 'entry': '0x8003EB30',
     'expected_prologue': '7c0802a690010004',
     'asm_base_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root, text=True).strip(),
     'gecko_commit': subprocess.check_output(['git', 'rev-parse', 'HEAD'], cwd=root / 'build-tools/gecko-src', text=True).strip(),
     'source_sha256': {name: hashlib.sha256((root / name).read_bytes()).hexdigest() for name in sources},
     'codeset_sha256': hashlib.sha256(output.read_bytes()).hexdigest(),
     'not_for_settlement': True,
+    'online': {'scene': '0x0208', 'finality': 'ODB_STABLE_FINALIZED_FRAME',
+               'room_players': [2, 3, 4], 'teams': 'immutable room configuration',
+               'confirmed_normal_end_methods': [1, 2, 3],
+               'unfinalized_nonzero_tail': 'incomplete; never promoted'},
     'result': {'command': '0xE8', 'protocol': 1, 'packet_bytes': 16,
                'extends_entry': '0x8016D884', 'expected_instruction': '819f2514',
                'team_standings_offset': '0x1C', 'team_rank_offset': '0x25',

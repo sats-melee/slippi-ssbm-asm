@@ -46,7 +46,10 @@ backup
   # replacement batch reaches the observer. EXI consumes it without recording.
   getMinorMajor r3
   cmpwi r3, SCENE_VERSUS_IN_GAME
+  beq ArenaFlushScene
+  cmpwi r3, SCENE_ONLINE_IN_GAME
   bne ArenaFlushDone
+ArenaFlushScene:
   mr r3, REG_WritePos
   lwz r4, primaryDataBuffer(r13)
   addi r4, r4, RDB_ARENA_TX
@@ -74,12 +77,15 @@ ArenaFlushDone:
   bne WRITE_FINALIZED_FRAME
 # Convert latest online frame index to replay frame index format
   lwz r5, OFST_R13_ODB_ADDR(r13) # data buffer address
+.ifndef SATS_ARENA
   lbz r4, ODB_IS_DISCONNECTED(r5)
   cmpwi r4, 0
   bne WRITE_FINALIZED_FRAME # If disconnected, just write the current frame
   lbz r4, ODB_IS_GAME_OVER(r5)
   cmpwi r4, 0
   bne WRITE_FINALIZED_FRAME # If game is over, just write the current frame
+.endif
+  # Arena credits never promote predictions when disconnected or quitting.
   lwz r4, ODB_STABLE_FINALIZED_FRAME(r5)
   addi r4, r4, CONST_FirstFrameIdx
   lwz r7, ODB_PAUSE_COUNTER(r5)

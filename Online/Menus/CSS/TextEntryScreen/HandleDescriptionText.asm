@@ -9,6 +9,13 @@ lbz r4, OFST_R13_NAME_ENTRY_MODE(r13)
 cmpwi r4, 0
 beq RESTORE
 
+.ifdef SATS_ARENA
+li r4, 7 # SPT_ROOM_CODE, provided by the emulator
+li r5, 1
+stb r5, OFST_R13_USE_PREMADE_TEXT(r13)
+b EXIT
+.endif
+
 # ID of our premade text for singles
 li r4, 87
 

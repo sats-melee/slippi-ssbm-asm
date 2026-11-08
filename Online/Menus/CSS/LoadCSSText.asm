@@ -94,18 +94,42 @@ blrl
 .set TPO_EMPTY_STRING, TPO_COLOR_RED + 4
 .string ""
 .set TPO_STRING_UNRANKED, TPO_EMPTY_STRING + 1
+.ifdef SATS_ARENA
+.string "Create Room"
+.else
 .string "Unranked"
+.endif
+.ifdef SATS_ARENA
+.set TPO_STRING_DIRECT, TPO_STRING_UNRANKED + 12
+.else
 .set TPO_STRING_DIRECT, TPO_STRING_UNRANKED + 9
+.endif
+.ifdef SATS_ARENA
+.string "Join Room"
+.else
 .string "Direct"
+.endif
+.ifdef SATS_ARENA
+.set TPO_STRING_RANKED, TPO_STRING_DIRECT + 10
+.else
 .set TPO_STRING_RANKED, TPO_STRING_DIRECT + 7
+.endif
 .string "Ranked"
 .set TPO_STRING_TEAMS, TPO_STRING_RANKED + 7
 .string "Teams"
 .set TPO_STRING_PARTY, TPO_STRING_TEAMS + 6
 .string "Party"
 .set TPO_STRING_MODE_FORMAT, TPO_STRING_PARTY + 6
+.ifdef SATS_ARENA
+.string "%s"
+.else
 .string "%s Mode"
+.endif
+.ifdef SATS_ARENA
+.set TPO_STRING_SELECT_YOUR_CHARACTER, TPO_STRING_MODE_FORMAT + 3
+.else
 .set TPO_STRING_SELECT_YOUR_CHARACTER, TPO_STRING_MODE_FORMAT + 8
+.endif
 .string "Select your character"
 .set TPO_STRING_CHARACTER_SELECTED, TPO_STRING_SELECT_YOUR_CHARACTER + 22
 .string "Character selected"
@@ -157,6 +181,12 @@ blrl
 .short 0x817C # －
 .byte 0x00
 
+.ifdef SATS_ARENA
+.set TPO_STRING_ROOM_STATUS, TPO_STRING_SPINNER_DONE + 3
+.string "%s"
+.set TPO_STRING_ROOM_MATCH, TPO_STRING_ROOM_STATUS + 3
+.string "Room Match"
+.endif
 .align 2
 
 ################################################################################
@@ -517,6 +547,12 @@ addi r5, REG_TEXT_PROPERTIES, TPO_STRING_MODE_FORMAT
 lbz r3, MSRB_CONNECTION_STATE(REG_MSRB_ADDR)
 cmpwi r3, MM_STATE_CONNECTION_SUCCESS
 bgt UPDATE_HEADER_ERROR
+.ifdef SATS_ARENA
+bne ARENA_ROOM_HEADER_MODE
+addi r6, REG_TEXT_PROPERTIES, TPO_STRING_ROOM_MATCH
+b UPDATE_HEADER
+ARENA_ROOM_HEADER_MODE:
+.endif
 
 # Decide which text to load based on mode
 lbz r3, OFST_R13_ONLINE_MODE(r13)
@@ -860,6 +896,16 @@ beq UPDATE_WAITING_WITH_OPPONENT
 cmpwi r3, MM_STATE_OPPONENT_CONNECTING
 beq UPDATE_CONNECTING_TO_OPPONENT
 
+.ifdef SATS_ARENA
+# Host receives its room code/status through the existing response buffer.
+lbz r11, OFST_R13_ONLINE_MODE(r13)
+cmpwi r11, ONLINE_MODE_UNRANKED
+bne ARENA_JOIN_WAITING
+addi r5, REG_TEXT_PROPERTIES, TPO_STRING_ROOM_STATUS
+addi r6, REG_MSRB_ADDR, MSRB_ERROR_MSG
+b UPDATE_WAITING
+ARENA_JOIN_WAITING:
+.endif
 # Prep "searching" text to use
 addi r5, REG_TEXT_PROPERTIES, TPO_STRING_SEARCHING_FOR
 addi r6, REG_TEXT_PROPERTIES, TPO_STRING_OPPONENT

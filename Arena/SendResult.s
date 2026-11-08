@@ -1,5 +1,5 @@
 # Inline extension of Recording/SendGameEnd.asm, after CreateMatchEndData.
-# Not a standalone injection. Only local Versus writes the private E8 message.
+# Not a standalone injection. Local and confirmed online games write the private E8 message.
 # Actual NTSC-U 1.02 result offsets verified against gm_801654A0:
 # team rank +0x25, active +0x26, stride 0x0C (table base +0x1C).
 backupall
@@ -12,7 +12,10 @@ stw r0, 0x88(r1)
 
 getMinorMajor r3
 cmpwi r3, SCENE_VERSUS_IN_GAME
+beq ArenaResultScene
+cmpwi r3, SCENE_ONLINE_IN_GAME
 bne ArenaResultExit
+ArenaResultScene:
 addi r31, r1, 0xA0
 byteAlign32 r31
 li r0, 0

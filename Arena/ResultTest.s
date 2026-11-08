@@ -1,5 +1,6 @@
 # Executes the actual inline E8 result sender against synthetic MatchEnd data.
 .include "Common/Common.s"
+.include "Online/Online.s"
 .set FN_EXITransferBuffer, MockEXI
 
 .section .text
@@ -57,6 +58,10 @@ load r20, ExpectedFFA4CPU
 bl SetExpected
 bl Hook
 
+# Online teams use the same authoritative result, including an eliminated winner.
+load r8, 0x80479d30
+load r9, 0x08000002
+stw r9, 0(r8)
 # Red P1/P3 win; P3's individual rank is NOT zero (already eliminated).
 li r0, 1
 stb r0, 6(r30)
@@ -114,11 +119,11 @@ load r20, ExpectedInvalidTeam
 bl SetExpected
 bl Hook
 
-# No result traffic in online or replay scenes.
+# No result traffic in online CSS or replay scenes.
 load r8, Calls
 lwz r21, 0(r8)
 load r8, 0x80479d30
-load r9, 0x08000002
+load r9, 0x08000000
 stw r9, 0(r8)
 bl Hook
 load r8, Calls

@@ -63,6 +63,10 @@ CODE_START:
 getMinorMajor r3
 cmpwi r3, SCENE_ONLINE_CSS
 bne EXIT # If not online CSS, continue as normal
+.ifdef SATS_ARENA
+# Teams are chosen by the host before room funding, never mutated by a peer.
+b EXIT
+.endif
 
 lbz r4, OFST_R13_ONLINE_MODE(r13)
 cmpwi r4, ONLINE_MODE_TEAMS

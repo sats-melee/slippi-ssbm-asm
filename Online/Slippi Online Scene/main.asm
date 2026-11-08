@@ -750,11 +750,14 @@ stb r3,OFST_R13_ISWINNER(r13)
 
 # Handle case where there's a draw and both players are "winners"
 SELECTOR_OVERWRITE:
+.ifndef SATS_ARENA
 lbz r3, OFST_R13_ONLINE_MODE(r13)
 cmpwi r3, ONLINE_MODE_TEAMS
 bne SELECTOR_OVERWRITE_NON_TEAMS
+.endif
 
-# If teams, just overwrite it so that P1 always picks
+# The Arena host picks the next stage for both FFA and teams.
+# Other builds retain Slippi's teams-only host selection.
 lbz r3, MSRB_LOCAL_PLAYER_INDEX(REG_MSRB_ADDR)
 li r4, 1
 cmpwi r3, 0

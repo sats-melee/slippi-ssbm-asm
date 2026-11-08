@@ -8,6 +8,12 @@
 cmpwi r3, 0x8
 bne- EXIT
 
+.ifdef SATS_ARENA
+cmpwi r4, 2
+bge RETURN_LOCKED
+b EXIT
+.endif
+
 /*
 CHECK_LOG_IN:
 loadGlobalFrame r3

@@ -10,9 +10,10 @@ It preserves GPRs, LR and CR, leaves FPRs/CTR/XER alone, and re-executes the
 displaced `mflr r0`. It never changes the original arguments or game statistics.
 The entry instruction must be verified against the target ISO before deployment.
 
-Only local `SCENE_VERSUS_IN_GAME` captures/sends data. Online, replay, and other
-scenes do not. The existing frame-start procedure zeroes a fixed-capacity buffer
-each frame. The hook appends at most 32 records; excess sets an overflow flag.
+Local `SCENE_VERSUS_IN_GAME` and online `SCENE_ONLINE_IN_GAME` capture/send data;
+replay and other scenes do not. The existing frame-start procedure zeroes a
+fixed-capacity buffer on every simulation, including rollback resimulation.
+The hook appends at most 32 records; excess sets an overflow flag.
 The existing flush procedure appends one private batch after ordinary frame data
 and **before** its frame bookend, using the same EXI transfer. The transfer buffer
 reserves an extra 392 bytes. Frame-start invalidation therefore precedes credit
@@ -41,10 +42,12 @@ explicitly, **never forward it to files, spectators, or reporting**. Do not use
 this codeset with an unmodified emulator.
 
 This is not a public Slippi event allocation. The emulator gates interpretation
-to local 2–4 participant FFA/team matches and publishes only finalized batches.
-Future rollback support must reset/restore this buffer each resimulation and
-replace entire pending batches (including empty ones); it is intentionally not
-enabled for online play.
+to 2–4 participant FFA/team matches and publishes only finalized batches.
+Rollback frame starts replace entire pending batches, including empty ones.
+Online bookends use `ODB_STABLE_FINALIZED_FRAME`; a disconnect or game-end flag
+never promotes speculative input. Normal timeout/stocks/stamina results wait
+for the online engine's confirmation past its rollback window. Discarding a
+nonempty unfinalized credit tail makes the observed result incomplete.
 
 Game credit and applied damage can differ for armor, invulnerability, throws,
 followers and the percent cap. Records retain follower and attack identities.
@@ -102,7 +105,7 @@ rather than trusting the reference source alone.
 `Arena/SendResult.s` extends the existing `Recording/SendGameEnd.asm` injection
 at `0x8016D884`; it introduces no second hook at that address. After the existing
 `CreateMatchEndData` call populates results, and before ordinary Slippi `0x39`
-is sent, local Versus emits this fixed 16-byte private message:
+is sent, local Versus and confirmed online games emit this fixed 16-byte message:
 
 | Offset | Field |
 | --- | --- |
@@ -135,5 +138,20 @@ those exact loads as well as the original game-end injection instruction.
 `Arena/test-result.sh` executes the actual PPC sender under QEMU. Fixtures
 cover FFA/CPU winners, stocks, timeout, eliminated winning teammates, tied
 standings, no contest and invalid fields, along with register/CR/CTR/XER
-preservation and online/replay exclusion. These fixtures test the transport and
+preservation, online team results and CSS/replay exclusion. These fixtures test the transport and
 result interpretation; actual game-end data must also be tested in the launcher.
+
+## Immutable online room settings
+
+The native host chooses 2–4 players, FFA/teams, and team assignments before
+creating a room. EXI applies that roster to the actual game block. Online CSS
+reads its mode and local team color from that block; Slippi's mutable team
+button is disabled in Arena online CSS. Team IDs are never randomly reassigned.
+The local Versus CSS and its payment gate retain their existing behavior.
+
+`Arena/test-room-css.sh` executes the actual PPC CSS hook under QEMU, checking
+FFA/teams transitions, all four local slots, canonical red/blue/green teams,
+unconnected menu preservation, and local CSS isolation. The native
+`RoomGameplayTest.cpp` covers actual game-block slot/team settings and rejects
+peer selections that do not match the immutable room roster. Live four-client
+FFA and teams testing remains necessary to verify gameplay and settlement.

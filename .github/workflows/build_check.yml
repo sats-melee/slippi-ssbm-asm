@@ -17,6 +17,17 @@ jobs:
         uses: actions/checkout@v4
         with:
           submodules: recursive
+      - name: Install Arena PPC test tools
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y binutils-powerpc-linux-gnu qemu-user
+      - name: Check Arena room menus, credits and result hooks
+        run: |
+          bash Arena/test-hook.sh
+          bash Arena/test-payment-gate.sh
+          bash Arena/test-result.sh
+          bash Arena/test-room-css.sh
+          python3 Arena/validate-room-menu.py
       - name: "Build"
         if: success()
         working-directory: ${{ github.workspace }}

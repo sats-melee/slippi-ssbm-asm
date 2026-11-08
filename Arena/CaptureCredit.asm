@@ -1,6 +1,6 @@
 ################################################################################
 # Address: 8003eb30
-# Annotation: Arena local game-credited damage (diagnostic, not applied percent)
+# Annotation: Arena game-credited damage (diagnostic, not applied percent)
 ################################################################################
 .include "Common/Common.s"
 .include "Recording/Recording.s"
@@ -17,7 +17,10 @@ stw r0, 0x80(r1)
 
 getMinorMajor r8
 cmpwi r8, SCENE_VERSUS_IN_GAME
+beq ArenaCreditScene
+cmpwi r8, SCENE_ONLINE_IN_GAME
 bne ArenaCreditExit
+ArenaCreditScene:
 cmplwi r3, 3
 bgt ArenaCreditExit
 cmplwi r5, 3

@@ -69,14 +69,29 @@ _start:
   lbz r9, RDB_ARENA_COUNT(r8)
   cmpwi r9, 1
   bne FailedGuards
-  # Online mode is inert.
+  # Online capture uses all four player indices too.
   load r9, 0x80479d30
   load r10, 0x08000002
   stw r10, 0(r9)
-  li r3, 0
+  li r3, 3
+  li r5, 2
   bl ArenaHook
   lbz r9, RDB_ARENA_COUNT(r8)
-  cmpwi r9, 1
+  cmpwi r9, 2
+  bne FailedGuards
+  lbz r9, RDB_ARENA_RECORDS+12(r8)
+  cmpwi r9, 3
+  bne FailedRecord
+  lbz r9, RDB_ARENA_RECORDS+14(r8)
+  cmpwi r9, 2
+  bne FailedRecord
+  # Replay scenes never capture credits.
+  load r9, 0x80479d30
+  load r10, 0x0e000002
+  stw r10, 0(r9)
+  bl ArenaHook
+  lbz r9, RDB_ARENA_COUNT(r8)
+  cmpwi r9, 2
   bne FailedGuards
   # Stale frame buffers are inert.
   load r9, 0x80479d30
@@ -86,7 +101,7 @@ _start:
   stw r9, RDB_ARENA_FRAME(r8)
   bl ArenaHook
   lbz r9, RDB_ARENA_COUNT(r8)
-  cmpwi r9, 1
+  cmpwi r9, 2
   bne FailedGuards
   # Overflow never writes record 33 or increments beyond capacity.
   li r9, 123
