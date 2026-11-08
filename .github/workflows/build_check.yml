@@ -22,6 +22,8 @@ jobs:
           sudo apt-get update -qq
           sudo apt-get install -y binutils-powerpc-linux-gnu qemu-user
       - name: Check Arena room menus, credits and result hooks
+        env:
+          QEMU_GUEST_BASE: "0x100000000"
         run: |
           bash Arena/test-hook.sh
           bash Arena/test-payment-gate.sh
